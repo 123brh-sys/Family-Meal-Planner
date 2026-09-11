@@ -5,7 +5,9 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 import { useFamily } from '@/context/FamilyContext';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 import { useIngredients } from '@/hooks/useIngredients';
+import { usePlanning } from '@/hooks/usePlanning';
 import { deleteMeal, getMeal } from '@/lib/meals';
+import { setMealSelected } from '@/lib/planning';
 import type { Meal } from '@/types/models';
 
 export default function MealDetail() {
@@ -13,6 +15,7 @@ export default function MealDetail() {
   const { family } = useFamily();
   const members = useFamilyMembers(family?.id);
   const ingredients = useIngredients();
+  const planning = usePlanning(family?.id);
   const router = useRouter();
   const [meal, setMeal] = useState<Meal | null | undefined>(undefined);
 
@@ -34,6 +37,7 @@ export default function MealDetail() {
 
   const memberName = (memberId: string) => members.find((m) => m.id === memberId)?.name ?? '?';
   const ingredientName = (refId: string) => ingredients.find((i) => i.id === refId)?.name ?? '?';
+  const isSelected = planning?.selectedMealIds.includes(meal.id) ?? false;
 
   function handleDelete() {
     Alert.alert('Delete this meal?', meal!.name, [
@@ -72,6 +76,15 @@ export default function MealDetail() {
         </Pressable>
       )}
 
+      <Pressable
+        style={[styles.shoppingToggle, isSelected && styles.shoppingToggleSelected]}
+        onPress={() => setMealSelected(family.id, meal.id, !isSelected)}
+      >
+        <Text style={[styles.shoppingToggleText, isSelected && styles.shoppingToggleTextSelected]}>
+          {isSelected ? '✓ On this week’s shopping list' : 'Add to shopping list'}
+        </Text>
+      </Pressable>
+
       <View style={styles.actions}>
         <Pressable style={styles.editButton} onPress={() => router.push(`/meal/${meal.id}/edit`)}>
           <Text style={styles.editButtonText}>Edit</Text>
@@ -94,6 +107,17 @@ const styles = StyleSheet.create({
   ingredient: { fontSize: 15 },
   linkButton: { marginTop: 16 },
   linkButtonText: { color: '#2e7d32', fontWeight: '600' },
+  shoppingToggle: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#2e7d32',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  shoppingToggleSelected: { backgroundColor: '#2e7d32' },
+  shoppingToggleText: { color: '#2e7d32', fontWeight: '600' },
+  shoppingToggleTextSelected: { color: '#fff' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 28 },
   editButton: {
     flex: 1,
