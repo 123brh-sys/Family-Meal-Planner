@@ -6,9 +6,10 @@ import { useFamily } from '@/context/FamilyContext';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 import { useIngredients } from '@/hooks/useIngredients';
 import { usePlanning } from '@/hooks/usePlanning';
-import { deleteMeal, getMeal } from '@/lib/meals';
+import { deleteMeal, getMeal, markMealCooked } from '@/lib/meals';
 import { setMealSelected } from '@/lib/planning';
 import type { Meal } from '@/types/models';
+import { findAllergyConflicts } from '@/utils/allergies';
 import { toDisplayQuantity } from '@/utils/displayUnits';
 
 export default function MealDetail() {
@@ -39,6 +40,8 @@ export default function MealDetail() {
   const memberName = (memberId: string) => members.find((m) => m.id === memberId)?.name ?? '?';
   const ingredientName = (refId: string) => ingredients.find((i) => i.id === refId)?.name ?? '?';
   const isSelected = planning?.selectedMealIds.includes(meal.id) ?? false;
+  const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
+  const conflicts = findAllergyConflicts(meal, members, ingredientById);
 
   function handleDelete() {
     Alert.alert('Delete this meal?', meal!.name, [
@@ -61,6 +64,19 @@ export default function MealDetail() {
 
       {meal.likedBy.length > 0 && (
         <Text style={styles.meta}>Liked by {meal.likedBy.map(memberName).join(', ')}</Text>
+      )}
+      {meal.lastCookedAt && (
+        <Text style={styles.meta}>Last cooked {new Date(meal.lastCookedAt).toLocaleDateString()}</Text>
+      )}
+
+      {conflicts.length > 0 && (
+        <View style={styles.allergyBox}>
+          {conflicts.map((c, i) => (
+            <Text key={i} style={styles.allergyText}>
+              ⚠ Contains {c.allergen} — {c.member.name} can&apos;t eat this
+            </Text>
+          ))}
+        </View>
       )}
 
       <Text style={styles.sectionTitle}>Ingredients</Text>
@@ -100,6 +116,10 @@ export default function MealDetail() {
         </Text>
       </Pressable>
 
+      <Pressable style={styles.cookedButton} onPress={() => markMealCooked(family.id, meal.id)}>
+        <Text style={styles.cookedButtonText}>Mark as cooked today</Text>
+      </Pressable>
+
       <View style={styles.actions}>
         <Pressable style={styles.editButton} onPress={() => router.push(`/meal/${meal.id}/edit`)}>
           <Text style={styles.editButtonText}>Edit</Text>
@@ -133,6 +153,10 @@ const styles = StyleSheet.create({
   shoppingToggleSelected: { backgroundColor: '#2e7d32' },
   shoppingToggleText: { color: '#2e7d32', fontWeight: '600' },
   shoppingToggleTextSelected: { color: '#fff' },
+  allergyBox: { marginTop: 12, gap: 4 },
+  allergyText: { color: '#c0392b', fontWeight: '600', fontSize: 13 },
+  cookedButton: { marginTop: 12, alignItems: 'center', paddingVertical: 8 },
+  cookedButtonText: { color: '#666', fontSize: 13 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 28 },
   editButton: {
     flex: 1,

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -84,8 +85,18 @@ export default function ShoppingList() {
   const pantryItems = items.filter(isPantryLine);
   const sortedActive = [...activeItems].sort((a, b) => Number(a.checked) - Number(b.checked));
 
+  function handleShare() {
+    const lines = sortedActive.map((item) => `${item.checked ? '[x]' : '[ ]'} ${displayLine(item)}`);
+    Share.share({ message: lines.join('\n') || 'Shopping list is empty.' });
+  }
+
   return (
     <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Pressable onPress={handleShare} hitSlop={8}>
+          <Text style={styles.shareLink}>Share / export list</Text>
+        </Pressable>
+      </View>
       <View style={styles.addRow}>
         <TextInput
           style={[styles.input, styles.nameInput]}
@@ -178,6 +189,8 @@ export default function ShoppingList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
+  headerRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  shareLink: { color: '#2e7d32', fontWeight: '600' },
   loading: { marginTop: 40 },
   addRow: { flexDirection: 'row', gap: 6 },
   input: {

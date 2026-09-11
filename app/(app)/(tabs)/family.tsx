@@ -16,6 +16,7 @@ import {
   archiveFamilyMember,
   deleteFamilyMember,
   renameFamilyMember,
+  setAllergies,
   subscribeFamilyMembers,
 } from '@/lib/familyMembers';
 import type { FamilyMember } from '@/types/models';
@@ -85,38 +86,56 @@ export default function FamilyMembers() {
           ListEmptyComponent={<Text style={styles.empty}>No family members yet.</Text>}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              {editingId === item.id ? (
-                <TextInput
-                  style={[styles.input, styles.rowInput]}
-                  value={editingName}
-                  onChangeText={setEditingName}
-                  autoFocus
-                  onSubmitEditing={async () => {
-                    await renameFamilyMember(family.id, item.id, editingName);
-                    setEditingId(null);
-                  }}
-                  onBlur={() => setEditingId(null)}
-                  returnKeyType="done"
-                />
-              ) : (
-                <Pressable
-                  style={styles.rowNamePressable}
-                  onPress={() => {
-                    setEditingId(item.id);
-                    setEditingName(item.name);
-                  }}
-                >
-                  <Text style={styles.rowName}>{item.name}</Text>
+              <View style={styles.rowTop}>
+                {editingId === item.id ? (
+                  <TextInput
+                    style={[styles.input, styles.rowInput]}
+                    value={editingName}
+                    onChangeText={setEditingName}
+                    autoFocus
+                    onSubmitEditing={async () => {
+                      await renameFamilyMember(family.id, item.id, editingName);
+                      setEditingId(null);
+                    }}
+                    onBlur={() => setEditingId(null)}
+                    returnKeyType="done"
+                  />
+                ) : (
+                  <Pressable
+                    style={styles.rowNamePressable}
+                    onPress={() => {
+                      setEditingId(item.id);
+                      setEditingName(item.name);
+                    }}
+                  >
+                    <Text style={styles.rowName}>{item.name}</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
+                  <Text style={styles.remove}>Remove</Text>
                 </Pressable>
-              )}
-              <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
-                <Text style={styles.remove}>Remove</Text>
-              </Pressable>
+              </View>
+              <AllergiesField familyId={family.id} member={item} />
             </View>
           )}
         />
       )}
     </View>
+  );
+}
+
+function AllergiesField({ familyId, member }: { familyId: string; member: FamilyMember }) {
+  const [text, setText] = useState(member.allergies.join(', '));
+
+  return (
+    <TextInput
+      style={styles.allergiesInput}
+      value={text}
+      onChangeText={setText}
+      onBlur={() => setAllergies(familyId, member.id, text)}
+      placeholder="Allergies (comma separated) — can't eat, not just dislikes"
+      placeholderTextColor="#999"
+    />
   );
 }
 
@@ -144,17 +163,16 @@ const styles = StyleSheet.create({
   list: { gap: 8 },
   empty: { textAlign: 'center', opacity: 0.5, marginTop: 24 },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ccc',
-    gap: 12,
+    gap: 6,
   },
+  rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   rowNamePressable: { flex: 1 },
   rowName: { fontSize: 16 },
   rowInput: { paddingVertical: 6 },
   remove: { color: '#c0392b' },
+  allergiesInput: { fontSize: 13, color: '#c0392b' },
 });

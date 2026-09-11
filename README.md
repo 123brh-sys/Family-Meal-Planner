@@ -115,5 +115,39 @@ device before moving to the next:
 6. ✅ Pantry item handling
 7. ✅ US/UK unit conversion
 8. ✅ AI recipe import (Cloud Function)
-9. Recipe link + keep-awake cooking view
-10. Polish (search, history, weekly planner, offline, etc.)
+9. ✅ Recipe link + keep-awake cooking view
+10. ✅ Polish — see below for what's in and what's deliberately deferred
+
+## Polish — what's included
+
+From §5's "suggested additions", these are implemented:
+
+- **Search** — Meals tab gets a search box once you have more than ~8 meals.
+- **Meal history** — "Mark as cooked today" on a meal's detail screen sets
+  `lastCookedAt`; Tonight's ranking nudges toward meals you haven't had in a while.
+- **Allergy/dietary flags** — Family members have a comma-separated allergies field
+  (`FamilyMember.allergies`), distinct from likedBy's "doesn't like." Tonight and meal
+  detail show a warning when a present member is allergic to an ingredient in a meal —
+  this is a heads-up (substring match against ingredient names), not a hard filter, so
+  always double-check before cooking.
+- **Export/share shopping list** — "Share / export list" on the Shopping List screen
+  opens the native share sheet with the list as plain text.
+
+### Deliberately deferred
+
+- **Theme (dark mode)** — `UserSettings.theme` exists in the data model but isn't wired
+  to the UI yet; every screen currently assumes a light background. Worth doing as a
+  dedicated pass (a real theme context + restyling every screen) rather than half-done.
+- **Portion scaling** — would need to track how many people a given meal selection is
+  *for*, which the current data model doesn't capture (selection is just a shared list of
+  meal IDs, not meal+headcount pairs). Needs a small data model change to do properly.
+- **Weekly planner view** — the current flow treats "selected meals" as one flat list
+  for the week rather than assigning specific meals to specific days; a calendar-style
+  view is a natural next feature on top of the existing `planning` doc.
+- **Durable offline persistence** — Firestore's default in-memory cache already lets
+  reads keep working and writes queue/retry through a brief network drop within a
+  session. True disk-persisted offline cache (surviving an app restart) needs
+  `persistentLocalCache`, which relies on an `indexedDB`-shaped API not reliably present
+  in the current React Native Firestore build without an extra polyfill — left out
+  rather than shipped untested.
+- **Push notifications** — spec called this "low priority, easy to skip."

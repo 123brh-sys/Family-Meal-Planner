@@ -52,6 +52,19 @@ export async function renameFamilyMember(
   await updateDoc(doc(membersCollection(familyId), memberId), { name: name.trim() });
 }
 
+/** Allergies are a hard "can't eat" constraint — distinct from likedBy's "doesn't like". */
+export async function setAllergies(
+  familyId: string,
+  memberId: string,
+  allergiesText: string
+): Promise<void> {
+  const allergies = allergiesText
+    .split(',')
+    .map((a) => a.trim())
+    .filter(Boolean);
+  await updateDoc(doc(membersCollection(familyId), memberId), { allergies });
+}
+
 /** Hides the member from active use without touching any meal's likedBy list. */
 export async function archiveFamilyMember(familyId: string, memberId: string): Promise<void> {
   await updateDoc(doc(membersCollection(familyId), memberId), { isArchived: true });

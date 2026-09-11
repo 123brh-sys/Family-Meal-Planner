@@ -4,16 +4,19 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 
 import { useFamily } from '@/context/FamilyContext';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { useIngredients } from '@/hooks/useIngredients';
 import { useMeals } from '@/hooks/useMeals';
 import { usePlanning } from '@/hooks/usePlanning';
 import { setMealSelected } from '@/lib/planning';
 import type { Meal } from '@/types/models';
+import { findAllergyConflicts } from '@/utils/allergies';
 
 export default function Tonight() {
   const { family } = useFamily();
   const members = useFamilyMembers(family?.id);
   const meals = useMeals(family?.id);
   const planning = usePlanning(family?.id);
+  const ingredients = useIngredients();
   const router = useRouter();
 
   const [presentIds, setPresentIds] = useState<Set<string> | null>(null);
@@ -30,10 +33,25 @@ export default function Tonight() {
   const matches = useMemo(() => {
     if (!meals || !presentIds) return [];
     const present = [...presentIds];
+    // Nudge toward meals that haven't been cooked in a while (never-cooked first).
     return meals
       .filter((meal) => present.every((id) => meal.likedBy.includes(id)))
-      .sort((a, b) => b.likedBy.length - a.likedBy.length || a.name.localeCompare(b.name));
+      .sort(
+        (a, b) =>
+          (a.lastCookedAt ?? 0) - (b.lastCookedAt ?? 0) ||
+          b.likedBy.length - a.likedBy.length ||
+          a.name.localeCompare(b.name)
+      );
   }, [meals, presentIds]);
+
+  const ingredientById = useMemo(
+    () => new Map((ingredients ?? []).map((i) => [i.id, i])),
+    [ingredients]
+  );
+  const presentMembers = useMemo(
+    () => activeMembers.filter((m) => presentIds?.has(m.id)),
+    [activeMembers, presentIds]
+  );
 
   function togglePresent(memberId: string) {
     setPresentIds((prev) => {
@@ -102,6 +120,7 @@ export default function Tonight() {
         }
         renderItem={({ item }) => {
           const selected = planning?.selectedMealIds.includes(item.id) ?? false;
+          const conflicts = findAllergyConflicts(item, presentMembers, ingredientById);
           return (
             <Pressable
               style={[styles.mealRow, selected && styles.mealRowSelected]}
@@ -112,6 +131,11 @@ export default function Tonight() {
                 <Text style={styles.mealMeta}>
                   {item.likedBy.length} of {activeMembers.length} like this
                 </Text>
+                {conflicts.length > 0 && (
+                  <Text style={styles.allergyWarning}>
+                    ⚠ Contains {conflicts[0].allergen} — {conflicts[0].member.name} can't eat this
+                  </Text>
+                )}
               </View>
               <Pressable onPress={() => router.push(`/meal/${item.id}`)} hitSlop={8}>
                 <Text style={styles.details}>Details</Text>
@@ -162,5 +186,6 @@ const styles = StyleSheet.create({
   mealInfo: { flex: 1 },
   mealName: { fontSize: 16, fontWeight: '600' },
   mealMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
+  allergyWarning: { fontSize: 12, color: '#c0392b', marginTop: 4, fontWeight: '600' },
   details: { color: '#2e7d32', fontSize: 13 },
 });
