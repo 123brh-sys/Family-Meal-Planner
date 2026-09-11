@@ -24,9 +24,10 @@ import {
   syncShoppingListWithMeals,
 } from '@/lib/shoppingList';
 import type { Ingredient, ShoppingListItem } from '@/types/models';
+import { toDisplayQuantity } from '@/utils/displayUnits';
 
 export default function ShoppingList() {
-  const { family } = useFamily();
+  const { family, settings } = useFamily();
   const meals = useMeals(family?.id);
   const planning = usePlanning(family?.id);
   const items = useShoppingList(family?.id);
@@ -59,6 +60,10 @@ export default function ShoppingList() {
   const ingredientName = (refId: string) => ingredientById.get(refId)?.name ?? '…';
   const isPantryLine = (item: ShoppingListItem) =>
     !item.addedManually && !item.outOfPantryOverride && Boolean(ingredientById.get(item.ingredientRefId)?.isPantryItem);
+  const displayLine = (item: ShoppingListItem) => {
+    const { quantity, unit } = toDisplayQuantity(item.quantity, item.unit, settings?.unitSystem ?? 'metric');
+    return `${quantity} ${unit} ${ingredientName(item.ingredientRefId)}`;
+  };
 
   async function handleAddManual() {
     if (!family || !manualName.trim()) return;
@@ -125,7 +130,7 @@ export default function ShoppingList() {
               {item.checked ? '☑' : '☐'}
             </Text>
             <Text style={[styles.itemText, item.checked && styles.itemTextChecked]}>
-              {item.quantity} {item.unit} {ingredientName(item.ingredientRefId)}
+              {displayLine(item)}
             </Text>
             <Pressable
               onPress={() => setIngredientPantryFlag(item.ingredientRefId, true)}
@@ -150,7 +155,7 @@ export default function ShoppingList() {
                 pantryItems.map((item) => (
                   <View key={item.id} style={styles.pantryRow}>
                     <Text style={styles.pantryItemText}>
-                      {item.quantity} {item.unit} {ingredientName(item.ingredientRefId)}
+                      {displayLine(item)}
                     </Text>
                     <Pressable
                       onPress={() => setIngredientPantryFlag(item.ingredientRefId, false)}

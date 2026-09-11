@@ -9,10 +9,11 @@ import { usePlanning } from '@/hooks/usePlanning';
 import { deleteMeal, getMeal } from '@/lib/meals';
 import { setMealSelected } from '@/lib/planning';
 import type { Meal } from '@/types/models';
+import { toDisplayQuantity } from '@/utils/displayUnits';
 
 export default function MealDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { family } = useFamily();
+  const { family, settings } = useFamily();
   const members = useFamilyMembers(family?.id);
   const ingredients = useIngredients();
   const planning = usePlanning(family?.id);
@@ -63,12 +64,15 @@ export default function MealDetail() {
       )}
 
       <Text style={styles.sectionTitle}>Ingredients</Text>
-      {meal.ingredients.map((ing) => (
-        <Text key={ing.id} style={styles.ingredient}>
-          {ing.quantity} {ing.unit} {ingredientName(ing.ingredientRefId)}
-          {ing.displayNote ? ` (${ing.displayNote})` : ''}
-        </Text>
-      ))}
+      {meal.ingredients.map((ing) => {
+        const { quantity, unit } = toDisplayQuantity(ing.quantity, ing.unit, settings?.unitSystem ?? 'metric');
+        return (
+          <Text key={ing.id} style={styles.ingredient}>
+            {quantity} {unit} {ingredientName(ing.ingredientRefId)}
+            {ing.displayNote ? ` (${ing.displayNote})` : ''}
+          </Text>
+        );
+      })}
 
       {meal.instructionsUrl && (
         <Pressable style={styles.linkButton} onPress={() => Linking.openURL(meal.instructionsUrl!)}>
