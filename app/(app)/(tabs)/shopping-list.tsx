@@ -15,8 +15,15 @@ import { useMeals } from '@/hooks/useMeals';
 import { usePlanning } from '@/hooks/usePlanning';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { createIngredient } from '@/lib/ingredients';
-import { addManualItem, removeItem, setItemChecked, syncShoppingListWithMeals } from '@/lib/shoppingList';
-import type { ShoppingListItem } from '@/types/models';
+import { setIngredientPantryFlag } from '@/lib/pantry';
+import {
+  addManualItem,
+  removeItem,
+  setItemChecked,
+  setOutOfPantryOverride,
+  syncShoppingListWithMeals,
+} from '@/lib/shoppingList';
+import type { Ingredient, ShoppingListItem } from '@/types/models';
 
 export default function ShoppingList() {
   const { family } = useFamily();
@@ -27,6 +34,7 @@ export default function ShoppingList() {
   const [manualName, setManualName] = useState('');
   const [manualQty, setManualQty] = useState('1');
   const [manualUnit, setManualUnit] = useState('unit');
+  const [pantryExpanded, setPantryExpanded] = useState(false);
   const lastSyncedKey = useRef<string>('');
 
   const selectedMeals = useMemo(
@@ -47,14 +55,17 @@ export default function ShoppingList() {
     syncShoppingListWithMeals(family.id, selectedMeals);
   }, [family, meals, planning, selectedMeals]);
 
-  const ingredientName = (refId: string) => ingredients?.find((i) => i.id === refId)?.name ?? '…';
+  const ingredientById = new Map((ingredients ?? []).map((i) => [i.id, i]));
+  const ingredientName = (refId: string) => ingredientById.get(refId)?.name ?? '…';
+  const isPantryLine = (item: ShoppingListItem) =>
+    !item.addedManually && !item.outOfPantryOverride && Boolean(ingredientById.get(item.ingredientRefId)?.isPantryItem);
 
   async function handleAddManual() {
     if (!family || !manualName.trim()) return;
     const existing = ingredients?.find(
       (i) => i.name.toLowerCase() === manualName.trim().toLowerCase()
     );
-    const ingredient = existing ?? (await createIngredient(manualName, manualUnit || 'unit'));
+    const ingredient: Ingredient = existing ?? (await createIngredient(manualName, manualUnit || 'unit'));
     await addManualItem(family.id, ingredient.id, Number(manualQty) || 1, manualUnit || 'unit');
     setManualName('');
     setManualQty('1');
@@ -64,7 +75,9 @@ export default function ShoppingList() {
     return <ActivityIndicator style={styles.loading} />;
   }
 
-  const sorted = [...items].sort((a, b) => Number(a.checked) - Number(b.checked));
+  const activeItems = items.filter((item) => !isPantryLine(item));
+  const pantryItems = items.filter(isPantryLine);
+  const sortedActive = [...activeItems].sort((a, b) => Number(a.checked) - Number(b.checked));
 
   return (
     <View style={styles.container}>
@@ -95,7 +108,7 @@ export default function ShoppingList() {
       </View>
 
       <FlatList
-        data={sorted}
+        data={sortedActive}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
@@ -114,11 +127,45 @@ export default function ShoppingList() {
             <Text style={[styles.itemText, item.checked && styles.itemTextChecked]}>
               {item.quantity} {item.unit} {ingredientName(item.ingredientRefId)}
             </Text>
+            <Pressable
+              onPress={() => setIngredientPantryFlag(item.ingredientRefId, true)}
+              hitSlop={8}
+            >
+              <Text style={styles.pantryToggle}>📦</Text>
+            </Pressable>
             <Pressable onPress={() => removeItem(family.id, item.id)} hitSlop={8}>
               <Text style={styles.remove}>✕</Text>
             </Pressable>
           </Pressable>
         )}
+        ListFooterComponent={
+          pantryItems.length > 0 ? (
+            <View style={styles.pantrySection}>
+              <Pressable style={styles.pantryHeader} onPress={() => setPantryExpanded((v) => !v)}>
+                <Text style={styles.pantryHeaderText}>
+                  {pantryExpanded ? '▾' : '▸'} Pantry — already have ({pantryItems.length})
+                </Text>
+              </Pressable>
+              {pantryExpanded &&
+                pantryItems.map((item) => (
+                  <View key={item.id} style={styles.pantryRow}>
+                    <Text style={styles.pantryItemText}>
+                      {item.quantity} {item.unit} {ingredientName(item.ingredientRefId)}
+                    </Text>
+                    <Pressable
+                      onPress={() => setIngredientPantryFlag(item.ingredientRefId, false)}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.pantryToggle}>📦</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setOutOfPantryOverride(family.id, item.id, true)}>
+                      <Text style={styles.outOfStock}>I&apos;m out of this</Text>
+                    </Pressable>
+                  </View>
+                ))}
+            </View>
+          ) : null
+        }
       />
     </View>
   );
@@ -162,4 +209,18 @@ const styles = StyleSheet.create({
   itemText: { fontSize: 16, flex: 1 },
   itemTextChecked: { opacity: 0.4, textDecorationLine: 'line-through' },
   remove: { color: '#c0392b', paddingHorizontal: 6 },
+  pantryToggle: { fontSize: 14, paddingHorizontal: 4 },
+  pantrySection: { marginTop: 16 },
+  pantryHeader: { paddingVertical: 8 },
+  pantryHeaderText: { fontSize: 13, opacity: 0.6, textTransform: 'uppercase' },
+  pantryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#eee',
+  },
+  pantryItemText: { fontSize: 14, opacity: 0.7, flex: 1 },
+  outOfStock: { color: '#2e7d32', fontSize: 12, fontWeight: '600' },
 });

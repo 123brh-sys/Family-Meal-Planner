@@ -123,3 +123,15 @@ export async function addManualItem(
 export async function removeItem(familyId: string, itemId: string): Promise<void> {
   await deleteDoc(doc(shoppingListCollection(familyId), itemId));
 }
+
+/**
+ * "I'm out of this" — promotes a pantry item onto the active list for this
+ * trip only, without touching the underlying Ingredient's pantry flag (§10).
+ */
+export async function setOutOfPantryOverride(
+  familyId: string,
+  itemId: string,
+  outOfPantryOverride: boolean
+): Promise<void> {
+  await updateDoc(doc(shoppingListCollection(familyId), itemId), { outOfPantryOverride });
+}

@@ -2,6 +2,7 @@ import { collection, doc, onSnapshot, setDoc, type Unsubscribe } from 'firebase/
 
 import { db } from '@/lib/firebase';
 import type { Ingredient } from '@/types/models';
+import { isDefaultPantryIngredient } from '@/utils/pantryDefaults';
 
 const ingredientsCollection = () => collection(db, 'ingredients');
 
@@ -14,15 +15,16 @@ export function subscribeIngredients(onChange: (ingredients: Ingredient[]) => vo
 export async function createIngredient(
   name: string,
   defaultUnit: string,
-  isPantryItem = false
+  isPantryItem?: boolean
 ): Promise<Ingredient> {
   const ref = doc(ingredientsCollection());
+  const trimmedName = name.trim();
   const ingredient: Ingredient = {
     id: ref.id,
-    name: name.trim(),
+    name: trimmedName,
     synonyms: [],
     defaultUnit,
-    isPantryItem,
+    isPantryItem: isPantryItem ?? isDefaultPantryIngredient(trimmedName),
     category: null,
   };
   await setDoc(ref, ingredient);
