@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isFamilyMember(familyId) {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberIds;
+    }
+
+    // Each user's own settings doc — never readable/writable by anyone else.
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Canonical ingredient dictionary — shared across all families (§3, §6).
+    // Anyone signed in can read/add, since it's just shared reference data.
+    // Deletes are blocked to avoid one family breaking another's meal data.
+    match /ingredients/{ingredientId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /families/{familyId} {
+      allow read, update: if isFamilyMember(familyId);
+      // Creation: the creator must place themselves in memberIds.
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.memberIds;
+      allow delete: if false;
+
+      match /members/{memberId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
+      match /meals/{mealId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
+      match /shoppingListItems/{itemId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+    }
+  }
+}
