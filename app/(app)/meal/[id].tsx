@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useFamily } from '@/context/FamilyContext';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
@@ -86,7 +86,7 @@ export default function MealDetail() {
       )}
 
       {meal.instructionsUrl && (
-        <Pressable style={styles.linkButton} onPress={() => Linking.openURL(meal.instructionsUrl!)}>
+        <Pressable style={styles.linkButton} onPress={() => router.push(`/meal/${meal.id}/cook`)}>
           <Text style={styles.linkButtonText}>Open recipe instructions</Text>
         </Pressable>
       )}

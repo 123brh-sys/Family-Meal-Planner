@@ -13,6 +13,7 @@ export default function AppLayout() {
         name="meal/[id]/edit"
         options={{ presentation: 'modal', title: 'Edit Meal' }}
       />
+      <Stack.Screen name="meal/[id]/cook" options={{ title: 'Recipe' }} />
     </Stack>
   );
 }
