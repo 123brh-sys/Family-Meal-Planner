@@ -28,14 +28,27 @@ npm install
 
 ### 3. Set up Google Sign-In
 
-Google Sign-In uses `expo-auth-session`, which works in Expo Go without a custom dev client.
+Google Sign-In uses `expo-auth-session`.
 
 1. In the [Google Cloud console](https://console.cloud.google.com/apis/credentials) for the
    same project Firebase created, create an OAuth 2.0 **Web application** client ID.
 2. Put that client ID in `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in `.env`.
 3. `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` are only needed
-   once you build standalone apps with EAS (not for Expo Go testing) — you can leave them
-   blank for now.
+   once you build standalone apps with EAS — you can leave them blank until then.
+4. Add the redirect URI `expo-auth-session`'s `promptAsync()` logs to the console (or that a
+   failed sign-in attempt reports) to the web client's **Authorized redirect URIs** in Google
+   Cloud console.
+
+**Expo Go caveat:** Expo Go can't register your app's own URL scheme, so the OAuth redirect
+URI it generates is tied to your current dev-server address and isn't stable enough to
+pre-register with Google in every case. If Google Sign-In doesn't complete inside Expo Go,
+build a development client instead (one-time, still tests like your own app):
+
+```bash
+npx expo run:android   # or: npx expo run:ios (needs a Mac), or `eas build --profile development`
+```
+
+Everything else in the app remains fully testable in plain Expo Go.
 
 ### 4. Deploy Firestore security rules
 
