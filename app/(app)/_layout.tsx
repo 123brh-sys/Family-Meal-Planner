@@ -1,13 +1,18 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 
-export default function AppTabsLayout() {
+export default function AppLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
-      <Tabs.Screen name="index" options={{ title: 'Tonight' }} />
-      <Tabs.Screen name="meals" options={{ title: 'Meals' }} />
-      <Tabs.Screen name="shopping-list" options={{ title: 'Shopping List' }} />
-      <Tabs.Screen name="family" options={{ title: 'Family' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
-    </Tabs>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="meal/new"
+        options={{ presentation: 'modal', title: 'New Meal' }}
+      />
+      <Stack.Screen name="meal/[id]" options={{ title: '' }} />
+      <Stack.Screen
+        name="meal/[id]/edit"
+        options={{ presentation: 'modal', title: 'Edit Meal' }}
+      />
+    </Stack>
   );
 }

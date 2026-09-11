@@ -59,6 +59,12 @@ service cloud.firestore {
       match /shoppingListItems/{itemId} {
         allow read, write: if isFamilyMember(familyId);
       }
+
+      // Small per-family scratch state (e.g. which meals are selected this
+      // week) that doesn't fit the other collections.
+      match /meta/{docId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
     }
   }
 }
