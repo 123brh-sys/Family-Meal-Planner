@@ -60,7 +60,25 @@ firebase use --add        # pick your Firebase project
 firebase deploy --only firestore:rules
 ```
 
-### 5. Run the app
+### 5. Set up AI recipe import (optional)
+
+The "Fill with AI" button on the Add/Edit Meal screen calls a Cloud Function so the
+Anthropic API key never ships in the app (§7). This step needs your Firebase project on
+the **Blaze (pay-as-you-go)** plan — Cloud Functions aren't available on the free Spark
+plan, though usage for a family-sized app is negligible.
+
+```bash
+cd functions
+npm install
+firebase functions:secrets:set ANTHROPIC_API_KEY   # paste your key from console.anthropic.com
+cd ..
+firebase deploy --only functions
+```
+
+Skip this step if you don't want AI import yet — the rest of the app works without it,
+the "Fill with AI" button will just show an error if tapped.
+
+### 6. Run the app
 
 ```bash
 npx expo start
@@ -81,6 +99,7 @@ src/
   context/             React context providers (auth state, family/settings state)
   components/          shared UI components
 firestore.rules        Firestore security rules — family-scoped access control
+functions/              Cloud Functions (AI recipe import) — separate npm project
 ```
 
 ## Build order
@@ -89,12 +108,12 @@ This app is being built in the stages recommended by the spec, each one testable
 device before moving to the next:
 
 1. ✅ Expo scaffold + Firebase project + data model
-2. Google Sign-In + family create/join by code
-3. Meals CRUD + the "Tonight" picker
-4. Family members CRUD
-5. Shopping list generation + ingredient merge logic
-6. Pantry item handling
-7. US/UK unit conversion
-8. AI recipe import (Cloud Function)
+2. ✅ Google Sign-In + family create/join by code
+3. ✅ Meals CRUD + the "Tonight" picker
+4. ✅ Family members CRUD
+5. ✅ Shopping list generation + ingredient merge logic (unit-tested)
+6. ✅ Pantry item handling
+7. ✅ US/UK unit conversion
+8. ✅ AI recipe import (Cloud Function)
 9. Recipe link + keep-awake cooking view
 10. Polish (search, history, weekly planner, offline, etc.)

@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
-import type { Meal, MealIngredient } from '@/types/models';
+import type { Meal, MealIngredient, MealSourceType } from '@/types/models';
 
 const mealsCollection = (familyId: string) => collection(db, 'families', familyId, 'meals');
 
@@ -32,6 +32,8 @@ export interface MealInput {
   ingredients: MealIngredient[];
   likedBy: string[];
   instructionsUrl: string | null;
+  instructions: string[] | null;
+  sourceType: MealSourceType;
   servings: number;
 }
 
@@ -45,7 +47,8 @@ export async function createMeal(familyId: string, input: MealInput): Promise<st
     likedBy: input.likedBy,
     ingredients: input.ingredients,
     instructionsUrl: input.instructionsUrl,
-    sourceType: 'manual',
+    instructions: input.instructions,
+    sourceType: input.sourceType,
     photoUrl: null,
     servings: input.servings,
     lastCookedAt: null,
@@ -66,6 +69,8 @@ export async function updateMeal(
     ingredients: input.ingredients,
     likedBy: input.likedBy,
     instructionsUrl: input.instructionsUrl,
+    instructions: input.instructions,
+    sourceType: input.sourceType,
     servings: input.servings,
     updatedAt: Date.now(),
   });

@@ -20,6 +20,7 @@ function meal(id: string, ingredients: MealIngredient[]): Meal {
     likedBy: [],
     ingredients,
     instructionsUrl: null,
+    instructions: null,
     sourceType: 'manual',
     photoUrl: null,
     servings: 4,

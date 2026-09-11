@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReactNativePersistence, initializeAuth, getAuth, type Auth } from '@firebase/auth';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -33,5 +34,7 @@ try {
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
+
+export const functions = getFunctions(app);
 
 export { app, auth };

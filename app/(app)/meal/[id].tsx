@@ -74,6 +74,17 @@ export default function MealDetail() {
         );
       })}
 
+      {meal.instructions && meal.instructions.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Steps</Text>
+          {meal.instructions.map((step, index) => (
+            <Text key={index} style={styles.ingredient}>
+              {index + 1}. {step}
+            </Text>
+          ))}
+        </>
+      )}
+
       {meal.instructionsUrl && (
         <Pressable style={styles.linkButton} onPress={() => Linking.openURL(meal.instructionsUrl!)}>
           <Text style={styles.linkButtonText}>Open recipe instructions</Text>

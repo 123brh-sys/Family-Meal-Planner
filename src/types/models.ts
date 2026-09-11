@@ -39,6 +39,7 @@ export interface Meal {
   likedBy: string[]; // FamilyMember ids
   ingredients: MealIngredient[];
   instructionsUrl: string | null;
+  instructions: string[] | null; // short generic AI-generated steps (§7) — never scraped/copied text
   sourceType: MealSourceType;
   photoUrl: string | null;
   servings: number; // base serving count ingredients are written for (§5 portion scaling)

@@ -11,9 +11,10 @@ import {
 
 import { MealIngredientRow } from '@/components/MealIngredientRow';
 import { useIngredients } from '@/hooks/useIngredients';
-import type { FamilyMember, Ingredient, Meal, MealIngredient } from '@/types/models';
-import { localId } from '@/utils/id';
+import { importRecipeByName, importRecipeByUrl, resolveImportedIngredients } from '@/lib/aiImport';
 import type { MealInput } from '@/lib/meals';
+import type { FamilyMember, Meal, MealIngredient, MealSourceType } from '@/types/models';
+import { localId } from '@/utils/id';
 
 interface Props {
   familyMembers: FamilyMember[];
@@ -35,8 +36,14 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
   const [rows, setRows] = useState<MealIngredient[]>(
     initialMeal?.ingredients.length ? initialMeal.ingredients : [emptyIngredient()]
   );
+  const [instructions, setInstructions] = useState<string[] | null>(initialMeal?.instructions ?? null);
+  const [sourceType, setSourceType] = useState<MealSourceType>(initialMeal?.sourceType ?? 'manual');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [aiInput, setAiInput] = useState('');
+  const [aiImporting, setAiImporting] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const ingredientById = new Map((ingredients ?? []).map((i) => [i.id, i]));
 
@@ -58,6 +65,34 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
     setRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
   }
 
+  async function handleAiImport() {
+    const query = aiInput.trim();
+    if (!query || !ingredients) return;
+    setAiImporting(true);
+    setAiError(null);
+    try {
+      const isUrl = /^https?:\/\//i.test(query);
+      const imported = isUrl
+        ? await importRecipeByUrl(query)
+        : await importRecipeByName(query, Number(servings) || 4);
+
+      const resolvedRows = await resolveImportedIngredients(imported.ingredients, ingredients);
+      setRows(resolvedRows.length ? resolvedRows : [emptyIngredient()]);
+      setInstructions(imported.steps.length ? imported.steps : null);
+      setSourceType(imported.sourceType);
+      if (isUrl) {
+        setInstructionsUrl(query);
+        if (!name.trim() && imported.sourceName) setName(imported.sourceName);
+      } else if (!name.trim()) {
+        setName(query);
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI import failed.');
+    } finally {
+      setAiImporting(false);
+    }
+  }
+
   async function handleSubmit() {
     if (!name.trim()) {
       setError('Give the meal a name.');
@@ -72,6 +107,8 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
         ingredients: validRows,
         likedBy,
         instructionsUrl: instructionsUrl.trim() || null,
+        instructions,
+        sourceType,
         servings: Number(servings) || 1,
       });
     } catch (err) {
@@ -83,6 +120,32 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <Text style={styles.label}>Fill with AI (optional)</Text>
+      <View style={styles.aiRow}>
+        <TextInput
+          style={[styles.input, styles.aiInput]}
+          value={aiInput}
+          onChangeText={setAiInput}
+          placeholder="Meal name or recipe URL"
+          autoCapitalize="none"
+        />
+        <Pressable style={styles.aiButton} disabled={aiImporting} onPress={handleAiImport}>
+          {aiImporting ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.aiButtonText}>Fill</Text>
+          )}
+        </Pressable>
+      </View>
+      {aiError ? <Text style={styles.error}>{aiError}</Text> : null}
+      {sourceType !== 'manual' && (
+        <Text style={styles.aiHint}>
+          {sourceType === 'ai-generated'
+            ? 'AI-generated recipe — review the ingredients below before saving.'
+            : 'Ingredients read from the linked page — review before saving.'}
+        </Text>
+      )}
+
       <Text style={styles.label}>Name</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Meal name" />
 
@@ -143,6 +206,17 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
         </>
       )}
 
+      {instructions && instructions.length > 0 && (
+        <>
+          <Text style={styles.label}>Steps (AI-generated)</Text>
+          {instructions.map((step, index) => (
+            <Text key={index} style={styles.step}>
+              {index + 1}. {step}
+            </Text>
+          ))}
+        </>
+      )}
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.submit} disabled={saving} onPress={handleSubmit}>
@@ -155,6 +229,18 @@ export function MealForm({ familyMembers, initialMeal, submitLabel, onSubmit }: 
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 6, paddingBottom: 48 },
   label: { fontSize: 13, opacity: 0.6, marginTop: 14, textTransform: 'uppercase' },
+  aiRow: { flexDirection: 'row', gap: 8 },
+  aiInput: { flex: 1 },
+  aiButton: {
+    backgroundColor: '#6a1b9a',
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiButtonText: { color: '#fff', fontWeight: '600' },
+  aiHint: { fontSize: 12, opacity: 0.6, marginTop: 4, fontStyle: 'italic' },
+  step: { fontSize: 14, marginTop: 4 },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
